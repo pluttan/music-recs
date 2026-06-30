@@ -1,0 +1,5 @@
+essentia-tensorflow==2.1b6.dev1110
+numpy<2
+psycopg[binary]==3.2.3
+pgvector==0.3.6
+mutagen==1.47.0

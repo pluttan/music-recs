@@ -1,0 +1,9 @@
+[Unit]
+Description=Generate 200-track daily mix playlist from music-recs similarity engine
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 %h/pr/life/music-recs/scripts/daily-mix.py
+StandardOutput=journal
+StandardError=journal

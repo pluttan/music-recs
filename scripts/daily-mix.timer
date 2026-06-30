@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily 200-track mix playlist generation
+
+[Timer]
+OnCalendar=*-*-* 06:30:00
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

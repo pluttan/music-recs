@@ -1,0 +1,49 @@
+services:
+  recs-db:
+    image: pgvector/pgvector:pg16
+    container_name: recs-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: recs
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-recs_local_dev}
+      POSTGRES_DB: music_recs
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U recs -d music_recs"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "127.0.0.1:5434:5432"
+
+  recs-worker:
+    build: ./worker
+    container_name: recs-worker
+    restart: unless-stopped
+    depends_on:
+      recs-db:
+        condition: service_healthy
+    volumes:
+      - ${LIBRARY_PATH:-/data/music/library}:/music:ro
+      - ./data/models:/models:ro
+    environment:
+      DATABASE_URL: postgres://recs:${POSTGRES_PASSWORD:-recs_local_dev}@recs-db:5432/music_recs
+      LIBRARY_PATH: /music
+      MODEL_DIR: /models
+      SCAN_INTERVAL_SEC: "3600"
+    command: ["python", "-u", "analyzer.py", "--watch"]
+
+  recs-api:
+    build: ./api
+    container_name: recs-api
+    restart: unless-stopped
+    depends_on:
+      recs-db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://recs:${POSTGRES_PASSWORD:-recs_local_dev}@recs-db:5432/music_recs
+    ports:
+      - "127.0.0.1:8765:8000"
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
