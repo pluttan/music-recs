@@ -1,16 +1,9 @@
-![Header](header.png)
-
 <div align="center">
 
 # music-recs
 
 **Самостоятельно размещаемые аудио-рекомендации музыки на основе MusiCNN-эмбеддингов**
 
-[![License](https://img.shields.io/badge/license-MIT-2C2C2C?style=for-the-badge&labelColor=1E1E1E)](LICENSE)
-[![Python](https://img.shields.io/badge/Python-worker-2C2C2C?style=for-the-badge&logo=python&labelColor=1E1E1E)]()
-[![FastAPI](https://img.shields.io/badge/FastAPI-api-2C2C2C?style=for-the-badge&logo=fastapi&labelColor=1E1E1E)]()
-[![pgvector](https://img.shields.io/badge/pgvector-PostgreSQL_16-2C2C2C?style=for-the-badge&logo=postgresql&labelColor=1E1E1E)]()
-[![Docker](https://img.shields.io/badge/Docker-compose-2C2C2C?style=for-the-badge&logo=docker&labelColor=1E1E1E)]()
 
 </div>
 
@@ -18,12 +11,12 @@
 
 ## ■ Возможности
 
-- ❖ **Audio-based similarity** — косинусное KNN по 200-мерным MusiCNN-эмбеддингам, не по метаданным
-- ❖ **Feature extraction** — BPM, тональность, громкость, энергия, танцевальность, настроение через essentia-tensorflow
+- ❖ **Схожесть по аудио** — косинусное KNN по 200-мерным MusiCNN-эмбеддингам, не по метаданным
+- ❖ **Извлечение признаков** — BPM, тональность, громкость, энергия, танцевальность, настроение через essentia-tensorflow
 - ❖ **pgvector search** — ivfflat cosine-индекс для быстрых запросов схожести
 - ❖ **REST API** — эндпоинты `/similar`, `/radio`, `/mood/<mood>`, `/stats` через FastAPI
-- ❖ **m3u playlist export** — systemd-таймеры записывают `.m3u`-файлы mood/daily-mix в директорию библиотеки Navidrome
-- ❖ **Auto-scan worker** — почасовое инкрементальное сканирование, пропускает треки с неизменившимися size/mtime
+- ❖ **Экспорт плейлистов m3u** — systemd-таймеры записывают `.m3u`-файлы mood/daily-mix в директорию библиотеки Navidrome
+- ❖ **Воркер автосканирования** — почасовое инкрементальное сканирование, пропускает треки с неизменившимися size/mtime
 - ❖ **Docker Compose** — одна команда `make up` поднимает PostgreSQL 16 + pgvector + worker + API
 
 ## ■ Стек
@@ -34,31 +27,26 @@
 |-----------|------------|
 | Извлечение признаков | essentia-tensorflow + MusiCNN |
 | Метаданные | mutagen |
-| Vector DB | PostgreSQL 16 + pgvector (ivfflat) |
+| Векторная БД | PostgreSQL 16 + pgvector (ivfflat) |
 | API | FastAPI + uvicorn |
-| Worker | Python (analyzer.py, watch mode) |
+| Воркер | Python (analyzer.py, режим слежения) |
 | Плейлисты | m3u dumper (systemd timer) |
 | Деплой | Docker Compose |
 
 </div>
 
-## ■ Как работает
+## ■ Как это работает
 
 ```
-/data/music/library/  (shared volume, read-only for worker)
-        |
-[worker] scans -> extracts features + embedding -> INSERT tracks
-        |
-   [recs-db (pgvector)]
-        |
-[api] /similar?path=X&n=20 -> vector KNN
-        |
-[m3u dumper, systemd timer] -> writes _playlists/*.m3u
-        |
-   Navidrome auto-scans -> clients see playlists
+1. Воркер сканирует /data/music/library/ (общий том, только чтение) на наличие новых или изменённых треков
+2. Для каждого трека извлекаются аудио-признаки (BPM, тональность, громкость, энергия, танцевальность, настроение) и 200-мерный MusiCNN-эмбеддинг
+3. Признаки и эмбеддинги сохраняются в PostgreSQL через pgvector (ivfflat cosine-индекс)
+4. FastAPI обслуживает эндпоинты /similar, /radio, /mood/<mood> и /stats с использованием vector KNN-запросов
+5. Systemd-таймер периодически запускает m3u dumper, записывая плейлисты mood и daily-mix в _playlists/*.m3u внутри директории библиотеки Navidrome
+6. Navidrome автоматически сканирует директорию, и все Subsonic-клиенты видят сгенерированные плейлисты
 ```
 
-## ■ Запуск
+## ■ Использование
 
 ```bash
 # Скачать модели essentia
@@ -79,6 +67,6 @@ make down
 
 Путь к библиотеке по умолчанию — `/data/music/library/`; переопределяется через переменную окружения `LIBRARY_PATH`.
 
-## ■ License
+## ■ Лицензия
 
 MIT © [pluttan](https://github.com/pluttan)
