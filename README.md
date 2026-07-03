@@ -1,16 +1,9 @@
-![Header](header.png)
-
 <div align="center">
 
 # music-recs
 
 **Self-hosted audio-based music recommendations with MusiCNN embeddings**
 
-[![License](https://img.shields.io/badge/license-MIT-2C2C2C?style=for-the-badge&labelColor=1E1E1E)](LICENSE)
-[![Python](https://img.shields.io/badge/Python-worker-2C2C2C?style=for-the-badge&logo=python&labelColor=1E1E1E)]()
-[![FastAPI](https://img.shields.io/badge/FastAPI-api-2C2C2C?style=for-the-badge&logo=fastapi&labelColor=1E1E1E)]()
-[![pgvector](https://img.shields.io/badge/pgvector-PostgreSQL_16-2C2C2C?style=for-the-badge&logo=postgresql&labelColor=1E1E1E)]()
-[![Docker](https://img.shields.io/badge/Docker-compose-2C2C2C?style=for-the-badge&logo=docker&labelColor=1E1E1E)]()
 
 </div>
 
@@ -28,6 +21,8 @@ Self-hosted music recommendation pipeline that runs alongside a Navidrome librar
 
 ## ■ Stack
 
+<div align="center">
+
 | Component | Technology |
 |-----------|------------|
 | Feature extraction | essentia-tensorflow + MusiCNN |
@@ -38,20 +33,17 @@ Self-hosted music recommendation pipeline that runs alongside a Navidrome librar
 | Playlists | m3u dumper (systemd timer) |
 | Deploy | Docker Compose |
 
-## ■ Data Flow
+</div>
+
+## ■ How It Works
 
 ```
-/data/music/library/  (shared volume, read-only for worker)
-        |
-[worker] scans -> extracts features + embedding -> INSERT tracks
-        |
-   [recs-db (pgvector)]
-        |
-[api] /similar?path=X&n=20 -> vector KNN
-        |
-[m3u dumper, systemd timer] -> writes _playlists/*.m3u
-        |
-   Navidrome auto-scans -> clients see playlists
+1. Worker scans /data/music/library/ (shared volume, read-only) for new or changed tracks
+2. For each track, extracts audio features (BPM, key, loudness, energy, danceability, mood) and a 200-dim MusiCNN embedding
+3. Features and embeddings are stored in PostgreSQL via pgvector (ivfflat cosine index)
+4. FastAPI serves /similar, /radio, /mood/<mood>, and /stats endpoints using vector KNN queries
+5. A systemd timer periodically runs the m3u dumper, writing mood and daily-mix playlists to _playlists/*.m3u inside the Navidrome library dir
+6. Navidrome auto-scans and all Subsonic clients see the generated playlists
 ```
 
 ## ■ Usage
